@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>Y-FILTER Remote Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --md-sys-color-primary: #2a57b7;
+      --md-sys-color-surface: #f7f9ff;
+      --md-sys-color-outline: #74777f;
+    }
+    body { font-family: 'Roboto', sans-serif; background-color: var(--md-sys-color-surface); margin: 0; padding: 24px; color: #1b1b1f; }
+    .container { max-width: 1080px; margin: 0 auto; background: #fff; padding: 0; border-radius: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden; animation: pageFade 520ms ease; }
+    .banner { padding: 20px 28px; background: #f2f5ff; border-bottom: 1px solid #dce2f0; display: flex; align-items: center; justify-content: space-between; }
+    .logo { font-size: 22px; font-weight: 800; color: var(--md-sys-color-primary); margin: 0; }
+    .layout { display: grid; grid-template-columns: 240px 1fr; min-height: 520px; }
+    .sidebar { background: #f7f9ff; border-right: 1px solid #e3e7f5; padding: 16px 12px; position: sticky; top: 0; height: 100vh; align-self: start; overflow: auto; }
+    .nav-item { width: 100%; text-align: left; background: transparent; border: 1px solid transparent; padding: 10px 12px; border-radius: 10px; font-size: 13px; cursor: pointer; color: #2b2f3a; transition: background 180ms ease, border-color 180ms ease, color 180ms ease, transform 180ms ease; }
+    .nav-item.active { background: #e8efff; border-color: #cdd9ff; color: #1a2c6b; }
+    .nav-item:hover { transform: translateX(2px); }
+    .main { padding: 24px 28px; }
+    .card { background: #eff1f9; padding: 20px; border-radius: 20px; margin-bottom: 24px; border: 1px solid #dce2f0; animation: cardIn 380ms ease; }
+    input[type="password"], input[type="text"], input[type="time"], textarea, select { width: 100%; padding: 12px 16px; border: 1px solid var(--md-sys-color-outline); border-radius: 8px; box-sizing: border-box; }
+    textarea { height: 100px; font-family: monospace; }
+    button { background: var(--md-sys-color-primary); color: white; border: none; padding: 12px 24px; border-radius: 24px; font-weight: 500; cursor: pointer; width: 100%; }
+    .secondary { background: #e0e2ec; color: #44474e; margin-top: 8px; }
+    #category-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+    .msg { color: #006a6a; font-size: 14px; text-align: center; margin-top: 10px; min-height: 20px; }
+    .section { display: none; }
+    .section.active { display: block; animation: sectionFade 260ms ease; }
+    .row { display: flex; gap: 10px; align-items: center; }
+    .row > * { flex: 1; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+    @keyframes pageFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes sectionFade {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="banner">
+      <div class="logo">Y-FILTER.</div>
+      <div style="font-size:12px;color:#5f6368;">Remote Settings</div>
+    </div>
+
+    <div class="layout">
+      <div class="sidebar">
+        <button class="nav-item active" data-target="section-status">端末一覧</button>
+        <button class="nav-item" data-target="section-basic">基本設定</button>
+        <button class="nav-item" data-target="section-block">ブロック設定</button>
+        <button class="nav-item" data-target="section-security">セキュリティ</button>
+        <button class="nav-item" data-target="section-files">ファイル制限</button>
+        <button class="nav-item" data-target="section-ads">広告ブロック</button>
+        <div style="margin-top:16px;">
+          <button id="save">遠隔設定を保存して適用</button>
+          <button id="open-local-options" class="secondary">ローカル設定ページを開く</button>
+          <div id="msg" class="msg"></div>
+        </div>
+      </div>
+
+      <div class="main">
+        <div id="section-status" class="section active">
+          <div class="card">
+            <h3>管理対象UUID</h3>
+            <p style="font-size:12px; color:#5f6368; margin-top:-6px;">拡張機能から自動登録されたUUIDを選択し、端末名を紐付けできます。</p>
+            <div class="row" style="margin-top:8px;">
+              <select id="device-select" style="flex:2;"></select>
+              <button id="refresh-devices" class="secondary" style="width:auto; margin-top:0;">再読込</button>
+            </div>
+            <div class="row" style="margin-top:8px;">
+              <input type="text" id="manual-uuid" placeholder="UUID を直接入力" />
+              <button id="load-manual-uuid" class="secondary" style="width:auto; margin-top:0;">UUID読み込み</button>
+            </div>
+            <div style="margin-top:12px; font-size:13px;">
+              <div>選択中UUID: <span id="selected-uuid" class="mono">-</span></div>
+              <div>最終設定更新: <span id="remote-updated-at">-</span></div>
+              <div>最終接続: <span id="remote-last-seen-at">-</span></div>
+            </div>
+            <div class="row" style="margin-top:10px;">
+              <input type="text" id="device-name" placeholder="端末名（例: 田中PC）" />
+              <button id="save-device-name" class="secondary" style="width:auto; margin-top:0;">端末名保存</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>設定ステータス</h3>
+            <div id="status-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:13px;">
+              <div>システム: <span id="status-system">-</span></div>
+              <div>監視: <span id="status-monitoring">-</span></div>
+              <div>広告ブロック: <span id="status-ads">-</span></div>
+              <div>ダウンロード: <span id="status-download">-</span></div>
+              <div>アクセスブロック: <span id="status-access">-</span></div>
+              <div>学習モード: <span id="status-learning">-</span></div>
+              <div>時間制限: <span id="status-time">-</span></div>
+              <div>オフライン画面: <span id="status-offline">-</span></div>
+              <div>軽量化モード: <span id="status-lite">-</span></div>
+              <div>アップロード制限: <span id="status-upload">-</span></div>
+              <div>広告強度: <span id="status-ads-level">-</span></div>
+            </div>
+            <div id="learning-status" style="font-size:12px; color:#444; margin-top:10px;">停止中</div>
+          </div>
+        </div>
+
+        <div id="section-basic" class="section">
+          <div class="card">
+            <h3>システム有効/無効</h3>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+              <input type="checkbox" id="system-enabled">
+              Y-FILTER を有効にする
+            </label>
+          </div>
+          <div class="card" id="chromeos-settings" style="display:none;">
+            <h3>Chromebook限定設定</h3>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:10px;">
+              <input type="checkbox" id="chromeos-lite-mode">
+              軽量化モード【Chromebook限定】
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+              <input type="checkbox" id="chromeos-offline-screen">
+              オフライン画面をONにする【Chromebook限定】
+            </label>
+          </div>
+          <div class="card">
+            <h3>ユーザーモード設定</h3>
+            <select id="ui-mode">
+              <option value="admin">管理者モード（設定変更が可能）</option>
+              <option value="user">ユーザーモード（閲覧のみ）</option>
+            </select>
+          </div>
+          <div class="card">
+            <h3>学習モード</h3>
+            <div class="row" style="margin-top:8px;">
+              <select id="learning-duration" style="width:auto;">
+                <option value="15">15分</option>
+                <option value="30">30分</option>
+                <option value="60" selected>60分</option>
+                <option value="120">120分</option>
+              </select>
+              <button id="start-learning" class="secondary" style="width:auto; margin-top:0;">開始</button>
+              <button id="stop-learning" class="secondary" style="width:auto; margin-top:0;">終了</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>プリセット</h3>
+            <div class="row" style="margin-top:8px;">
+              <select id="preset-select" style="width:auto;">
+                <option value="">選択してください</option>
+                <option value="focus">集中用</option>
+                <option value="school">学校用</option>
+                <option value="work">業務用</option>
+              </select>
+              <button id="apply-preset" class="secondary" style="width:auto; margin-top:0;">適用</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="section-block" class="section">
+          <div class="card">
+            <h3>セーフサーチ</h3>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+              <input type="checkbox" id="safe-search-enabled">
+              Google / Bing のセーフサーチを有効にする
+            </label>
+          </div>
+          <div class="card">
+            <h3>カテゴリ一括設定</h3>
+            <div id="category-options"></div>
+          </div>
+          <div class="card">
+            <h3>個別URLブロック</h3>
+            <textarea id="rules" placeholder="example.com,SNS"></textarea>
+          </div>
+          <div class="card">
+            <h3>ホワイトリスト & 時間制限</h3>
+            <textarea id="allow-list" placeholder="許可するドメイン"></textarea>
+            <div style="margin-top:10px; display:flex; gap:10px; align-items:center;">
+              時間制限 <select id="time-enabled" style="width:auto;"><option value="false">OFF</option><option value="true">ON</option></select>
+              <input type="time" id="time-start"> 〜 <input type="time" id="time-end">
+            </div>
+          </div>
+        </div>
+
+        <div id="section-security" class="section">
+          <div class="card">
+            <h3>アクセスコード</h3>
+            <input type="password" id="access-code" placeholder="アクセスコード" />
+            <p style="font-size:12px; color:#5f6368; margin-top:8px;">`options.html?code=XXXX` で設定画面に入るためのコードです。</p>
+          </div>
+          <div class="card">
+            <h3>アクセスモード</h3>
+            <select id="access-mode">
+              <option value="0">通常（コード一致で管理者表示）</option>
+              <option value="1">完全ブロック（設定画面を開けない）</option>
+              <option value="2">利用者表示（ステータスのみ閲覧）</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="section-files" class="section">
+          <div class="card">
+            <h3>ダウンロード制限</h3>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:10px;">
+              <input type="checkbox" id="block-all-downloads">
+              すべてのダウンロードをブロック
+            </label>
+            <p style="font-size:12px; margin: 6px 0;">ブロックする拡張子（ダウンロード）</p>
+            <div id="download-extensions-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:13px;">
+              <label><input type="checkbox" value="exe"> exe</label>
+              <label><input type="checkbox" value="msi"> msi</label>
+              <label><input type="checkbox" value="zip"> zip</label>
+              <label><input type="checkbox" value="rar"> rar</label>
+              <label><input type="checkbox" value="7z"> 7z</label>
+              <label><input type="checkbox" value="pdf"> pdf</label>
+              <label><input type="checkbox" value="doc"> doc</label>
+              <label><input type="checkbox" value="docx"> docx</label>
+              <label><input type="checkbox" value="xls"> xls</label>
+              <label><input type="checkbox" value="xlsx"> xlsx</label>
+              <label><input type="checkbox" value="ppt"> ppt</label>
+              <label><input type="checkbox" value="pptx"> pptx</label>
+              <label><input type="checkbox" value="apk"> apk</label>
+            </div>
+            <p style="font-size:12px; margin: 12px 0 6px;">ブロックするダウンロード元ドメイン（1行1件）</p>
+            <textarea id="download-block-domains" placeholder="example.com"></textarea>
+          </div>
+
+          <div class="card">
+            <h3>アップロード制限</h3>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px; margin-bottom:10px;">
+              <input type="checkbox" id="block-all-uploads">
+              すべてのアップロードをブロック
+            </label>
+            <p style="font-size:12px; margin: 6px 0;">ブロックする拡張子（アップロード）</p>
+            <div id="upload-extensions-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:13px;">
+              <label><input type="checkbox" value="exe"> exe</label>
+              <label><input type="checkbox" value="msi"> msi</label>
+              <label><input type="checkbox" value="zip"> zip</label>
+              <label><input type="checkbox" value="rar"> rar</label>
+              <label><input type="checkbox" value="7z"> 7z</label>
+              <label><input type="checkbox" value="pdf"> pdf</label>
+              <label><input type="checkbox" value="doc"> doc</label>
+              <label><input type="checkbox" value="docx"> docx</label>
+              <label><input type="checkbox" value="xls"> xls</label>
+              <label><input type="checkbox" value="xlsx"> xlsx</label>
+              <label><input type="checkbox" value="ppt"> ppt</label>
+              <label><input type="checkbox" value="pptx"> pptx</label>
+              <label><input type="checkbox" value="apk"> apk</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="section-ads" class="section">
+          <div class="card">
+            <h3>広告ブロック</h3>
+            <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+              <input type="checkbox" id="ad-block-enabled">
+              広告ブロックを有効にする
+            </label>
+            <div style="margin-top:10px;">
+              <label style="font-size:12px; color:#5f6368;">ブロックレベル</label>
+              <select id="ad-block-level" style="margin-top:6px;">
+                <option value="low">弱（誤検出を抑える）</option>
+                <option value="medium">中（バランス）</option>
+                <option value="high">強（強力に非表示）</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="remote.js"></script>
+</body>
+</html>
